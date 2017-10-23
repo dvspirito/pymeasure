@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,29 +22,18 @@
 # THE SOFTWARE.
 #
 
-from pymeasure.experiment import Procedure, IntegerParameter, Parameter, FloatParameter
-import random
+import logging
+
+from pymeasure.adapters import FakeAdapter
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
-class TestProcedure(Procedure):
-
-    iterations = IntegerParameter('Loop Iterations', default=100)
-    delay = FloatParameter('Delay Time', units='s', default=0.2)
-    seed = Parameter('Random Seed', default='12345')
-
-    DATA_COLUMNS = ['Iteration', 'Random Number']
-
-    def startup(self):
-        random.seed(self.seed)
-
-    def execute(self):
-        for i in range(self.iterations):
-            data = {
-                'Iteration': i,
-                'Random Number': random.random()
-            }
-            self.emit('results', data)
-            self.emit('progress', 100.*i/self.iterations)
-            sleep(self.delay)
-            if self.should_stop():
-                break
+def test_adapter_values():
+    a = FakeAdapter()
+    assert a.values("5,6,7") == [5, 6, 7]
+    assert a.values("5,6,7", cast=str) == ['5', '6', '7']
+    assert a.values("X,Y,Z") == ['X', 'Y', 'Z']
+    assert a.values("X,Y,Z", cast=str) == ['X', 'Y', 'Z']
+    assert a.values("X.Y.Z", separator='.') == ['X', 'Y', 'Z']

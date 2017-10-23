@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -58,11 +58,11 @@ class HP33120A(Instrument):
     )
     max_frequency = Instrument.measurement(
         "SOUR:FREQ? MAX", 
-        """ Reads the maximum :attr:`~.frequency` in Hz for the given shape """
+        """ Reads the maximum :attr:`~.HP33120A.frequency` in Hz for the given shape """
     )
     min_frequency = Instrument.measurement(
         "SOUR:FREQ? MIN", 
-        """ Reads the minimum :attr:`~.frequency` in Hz for the given shape """
+        """ Reads the minimum :attr:`~.HP33120A.frequency` in Hz for the given shape """
     )
     amplitude = Instrument.control(
         "SOUR:VOLT?", "SOUR:VOLT %g",

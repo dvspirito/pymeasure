@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,11 @@
 # THE SOFTWARE.
 #
 import logging
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
 
 from .adapter import Adapter, FakeAdapter
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 try:
     from pymeasure.adapters.visa import VISAAdapter

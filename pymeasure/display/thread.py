@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,14 @@
 # THE SOFTWARE.
 #
 
+import logging
+
 from threading import Event
+
 from .Qt import QtCore
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 class StoppableQThread(QtCore.QThread):
@@ -32,9 +38,9 @@ class StoppableQThread(QtCore.QThread):
     """
 
     def __init__(self, parent=None):
+        super().__init__(parent)
         self._should_stop = Event()
         self._should_stop.clear()
-        super(StoppableQThread, self).__init__(parent)
 
     def join(self, timeout=0):
         """ Joins the current thread and forces it to stop after

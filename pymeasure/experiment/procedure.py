@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,13 @@
 # THE SOFTWARE.
 #
 
-from .parameters import Parameter, Measurable
 import logging
+import sys
+from copy import deepcopy
+from importlib.machinery import SourceFileLoader
+
+from .parameters import Parameter, Measurable
+
 log = logging.getLogger()
 log.addHandler(logging.NullHandler())
 
@@ -49,7 +54,13 @@ class Procedure(object):
     """
 
     DATA_COLUMNS = []
+    MEASURE = {}
     FINISHED, FAILED, ABORTED, QUEUED, RUNNING = 0, 1, 2, 3, 4
+    STATUS_STRINGS = {
+        FINISHED: 'Finished', FAILED: 'Failed', 
+        ABORTED: 'Aborted', QUEUED: 'Queued',
+        RUNNING: 'Running'
+    }
 
     _parameters = {}
 
@@ -59,24 +70,25 @@ class Procedure(object):
         for key in kwargs:
             if key in self._parameters.keys():
                 setattr(self, key, kwargs[key])
-                log.info('Setting parameter %s to %s' %(key, kwargs[key]))
+                log.info('Setting parameter %s to %s' % (key, kwargs[key]))
         self.gen_measurement()
 
     def gen_measurement(self):
-        '''Create MEASURE and DATA_COLUMNS variables for get_datapoint method.
-        '''
-        # TODO: Refactor measurables implementation to be consistent with parameters
+        """Create MEASURE and DATA_COLUMNS variables for get_datapoint method."""
+        # TODO: Refactor measurable-s implementation to be consistent with parameters
+
         self.MEASURE = {}
         for item in dir(self):
             parameter = getattr(self, item)
             if isinstance(parameter, Measurable):
                 if parameter.measure:
                     self.MEASURE.update({parameter.name: item})
-        if self.DATA_COLUMNS == []:
+
+        if not self.DATA_COLUMNS:
             self.DATA_COLUMNS = Measurable.DATA_COLUMNS
 
     def get_datapoint(self):
-        data = {key:getattr(self,self.MEASURE[key]).value for key in self.MEASURE}
+        data = {key: getattr(self, self.MEASURE[key]).value for key in self.MEASURE}
         return data
 
     def measure(self):
@@ -94,7 +106,7 @@ class Procedure(object):
         for item in dir(self):
             parameter = getattr(self, item)
             if isinstance(parameter, Parameter):
-                self._parameters[item] = parameter
+                self._parameters[item] = deepcopy(parameter)
                 if parameter.is_set():
                     setattr(self, item, parameter.value)
                 else:
@@ -167,7 +179,7 @@ class Procedure(object):
             else:
                 if except_missing:
                     raise NameError("Parameter '%s' does not belong to '%s'" % (
-                            name, repr(self)))
+                        name, repr(self)))
 
     def startup(self):
         """ Executes the commands needed at the start-up of the measurement
@@ -187,11 +199,23 @@ class Procedure(object):
         """
         pass
 
+    def emit(self, topic, record):
+        raise NotImplementedError('should be monkey patched by a worker')
+
+    def should_stop(self):
+        raise NotImplementedError('should be monkey patched by a worker')
+
     def __str__(self):
         result = repr(self) + "\n"
         for parameter in self._parameters.items():
             result += str(parameter)
         return result
+
+    def __repr__(self):
+        return "<{}(status={},parameters_are_set={})>".format(
+            self.__class__.__name__, self.STATUS_STRINGS[self.status],
+            self.parameters_are_set()
+        )
 
 
 class UnknownProcedure(Procedure):
@@ -200,7 +224,44 @@ class UnknownProcedure(Procedure):
     """
 
     def __init__(self, parameters):
+        super().__init__()
         self._parameters = parameters
 
     def startup(self):
-        raise Exception("UnknownProcedure can not be run")
+        raise NotImplementedError("UnknownProcedure can not be run")
+
+
+class ProcedureWrapper(object):
+
+    def __init__(self, procedure):
+        self.procedure = procedure
+
+    def __getstate__(self):
+        # Get all information needed to reconstruct procedure
+        self._parameters = self.procedure.parameter_values()
+        self._class = self.procedure.__class__.__name__
+        module = sys.modules[self.procedure.__module__]
+        self._package = module.__package__
+        self._module = module.__name__
+        self._file = module.__file__
+
+        state = self.__dict__.copy()
+        del state['procedure']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+        # Restore the procedure
+        module = SourceFileLoader(self._module, self._file).load_module()
+        cls = getattr(module, self._class)
+
+        self.procedure = cls()
+        self.procedure.set_parameters(self._parameters)
+        self.procedure.refresh_parameters()
+
+        del self._parameters
+        del self._class
+        del self._package
+        del self._module
+        del self._file

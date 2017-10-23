@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,3 +25,5 @@
 from .agilent8257D import Agilent8257D
 from .agilent8722ES import Agilent8722ES
 from .agilentE4408B import AgilentE4408B
+from .agilentE4980 import AgilentE4980
+from .agilent34410A import Agilent34410A

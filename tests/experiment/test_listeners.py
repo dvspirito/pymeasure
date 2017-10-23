@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,23 +22,19 @@
 # THE SOFTWARE.
 #
 
-import pytest
+import time
+from queue import Queue
+
+from pymeasure.experiment.listeners import Listener, Recorder
 from pymeasure.experiment.results import Results
-import os
-import tempfile
-from importlib.machinery import SourceFileLoader
 
-# Load the procedure, without it being in a module
-data_path = os.path.join(os.path.dirname(__file__), 'data/procedure_for_testing.py')
-procedure = SourceFileLoader('procedure', data_path).load_module()
+# TODO: Make results_for_testing.csv
+# TODO: Make procedure_for_testing.py
 
-
-def test_procedure():
-    """ Ensure that the loaded test procedure is properly functioning
-    """
-    p = procedure.TestProcedure()
-    assert p.iterations == 100
-    assert hasattr(p, 'execute')
-
-
-
+"""
+def test_recorder_stop():
+    q = Queue()
+    d = Results.load('results_for_testing.csv')
+    r = Recorder(d, q)
+    r.
+"""

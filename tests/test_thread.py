@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,23 +22,18 @@
 # THE SOFTWARE.
 #
 
-import pytest
-from pymeasure.experiment.procedure import Procedure
-from pymeasure.experiment.parameters import Parameter
+from pymeasure.thread import StoppableThread
 
 
-def test_parameters():
-    class TestProcedure(Procedure):
-        x = Parameter('X', default=5)
+def test_thread_stopping():
+    t = StoppableThread()
+    t.start()
+    t.stop()
+    assert t.should_stop() is True
+    t.join()
 
-    p = TestProcedure()
-    assert p.x == 5
-    p.x = 10
-    assert p.x == 10
-    assert p.parameters_are_set()
-    objs = p.parameter_objects()
-    assert 'x' in objs
-    assert objs['x'].value == p.x
-
-
-# TODO: Add tests for measureables
+def test_thread_joining():
+    t = StoppableThread()
+    t.start()
+    t.join()
+    assert t.should_stop() is True

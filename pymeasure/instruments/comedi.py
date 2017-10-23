@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,15 +23,17 @@
 #
 
 from pymeasure.experiment import Procedure, Parameter, FloatParameter, IntegerParameter
-
-from pycomedi.subdevice import StreamingSubdevice
-from pycomedi.constant import *
-from pycomedi.constant import _NamedInt
-from pycomedi.channel import AnalogChannel
-from pycomedi.utility import inttrig_insn, Reader, CallbackReader
 import numpy as np
 from time import time, sleep
 from threading import Event
+from importlib.util import find_spec
+
+if find_spec('pycomedi'):  # Guard against pycomedi not being installed
+    from pycomedi.subdevice import StreamingSubdevice
+    from pycomedi.constant import *
+    from pycomedi.constant import _NamedInt
+    from pycomedi.channel import AnalogChannel
+    from pycomedi.utility import inttrig_insn, Reader, CallbackReader
 
 
 def getAI(device, channel, range=None):

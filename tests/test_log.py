@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +22,27 @@
 # THE SOFTWARE.
 #
 
-from pymeasure.experiment.listeners import Listener, Recorder
-from pymeasure.experiment.results import Results
-from multiprocessing import Queue
-from time import sleep
+import time
+from pymeasure.process import context
+from pymeasure.log import Scribe
 
 
-"""
-def test_recorder_stop():
-    q = Queue()
-    d = Results.load('results_for_testing.csv')
-    r = Recorder(d, q)
-    r.
-"""
+# TODO: Add tests for logging convenience functions and TopicQueueHandler
 
-# TODO: Make results_for_testing.csv
-# TODO: Make procedure_for_testing.py
+def test_scribe_stop():
+    q = context.Queue()
+    s = Scribe(q)
+    s.start()
+    assert s.is_alive() is True
+    s.stop()
+    assert s.is_alive() is False
+
+
+def test_scribe_finish():
+    q = context.Queue()
+    s = Scribe(q)
+    s.start()
+    assert s.is_alive() is True
+    q.put(None)
+    time.sleep(0.1)
+    assert s.is_alive() is False

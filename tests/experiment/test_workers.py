@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,16 +23,19 @@
 #
 
 import pytest
-from pymeasure.experiment.workers import Worker
-from pymeasure.experiment.results import Results
 import os
 import tempfile
 from time import sleep
 from importlib.machinery import SourceFileLoader
 
+from pymeasure.experiment.workers import Worker
+from pymeasure.experiment.results import Results
+
 # Load the procedure, without it being in a module
 data_path = os.path.join(os.path.dirname(__file__), 'data/procedure_for_testing.py')
-procedure = SourceFileLoader('procedure', data_path).load_module()
+RandomProcedure = SourceFileLoader('procedure', data_path).load_module().RandomProcedure
+#from data.procedure_for_testing import RandomProcedure
+
 
 slow = pytest.mark.skipif(
     not pytest.config.getoption("--runslow"),
@@ -43,27 +46,30 @@ slow = pytest.mark.skipif(
 def test_procedure():
     """ Ensure that the loaded test procedure is properly functioning
     """
-    p = procedure.TestProcedure()
-    assert p.iterations == 100
-    assert hasattr(p, 'execute')
+    procedure = RandomProcedure()
+    assert procedure.iterations == 100
+    assert procedure.delay == 0.001
+    assert hasattr(procedure, 'execute')
 
 def test_worker_stop():
-    p = procedure.TestProcedure()
-    f = tempfile.mktemp()
-    r = Results(p, f)
-    w = Worker(r)
-    w.start()
-    w.stop()
-    assert w.should_stop()
-    w.join()
+    procedure = RandomProcedure()
+    file = tempfile.mktemp()
+    results = Results(procedure, file)
+    worker = Worker(results)
+    worker.start()
+    worker.stop()
+    assert worker.should_stop()
+    worker.join()
 
-@slow
 def test_worker_finish():
-    p = procedure.TestProcedure()
-    f = tempfile.mktemp()
-    r = Results(p, f)
-    w = Worker(r)
-    w.start()
-    w.join()
-    sleep(2)
-    assert w.is_alive() == False
+    procedure = RandomProcedure()
+    procedure.iterations = 100
+    procedure.delay = 0.001
+    file = tempfile.mktemp()
+    results = Results(procedure, file)
+    worker = Worker(results)
+    worker.start()
+    worker.join(timeout=5)
+
+    new_results = Results.load(file, procedure_class=RandomProcedure)
+    assert new_results.data.shape == (100, 2)

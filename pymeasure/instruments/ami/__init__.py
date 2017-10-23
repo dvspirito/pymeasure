@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,13 +22,4 @@
 # THE SOFTWARE.
 #
 
-from pymeasure.adapters import FakeAdapter
-
-
-def test_adapter_values():
-    a = FakeAdapter()
-    assert a.values("5,6,7") == [5, 6, 7]
-    assert a.values("5,6,7", cast=str) == ['5', '6', '7']
-    assert a.values("X,Y,Z") == ['X', 'Y', 'Z']
-    assert a.values("X,Y,Z", cast=str) == ['X', 'Y', 'Z']
-    assert a.values("X.Y.Z", separator='.') == ['X', 'Y', 'Z']
+from .ami430 import AMI430

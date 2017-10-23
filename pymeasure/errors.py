@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,27 +22,14 @@
 # THE SOFTWARE.
 #
 
-from pymeasure.log import Scribe
-from multiprocessing import Queue
-from time import sleep
+
+class Error(Exception):
+    pass
 
 
-def test_scribe_stop():
-    q = Queue()
-    s = Scribe(q)
-    s.start()
-    assert s.is_alive() == True
-    s.stop()
-    assert s.is_alive() == False
-
-def test_scribe_finish():
-    q = Queue()
-    s = Scribe(q)
-    s.start()
-    assert s.is_alive() == True
-    q.put(None)
-    sleep(0.1)
-    assert s.is_alive() == False
+class RangeError(Error):
+    pass
 
 
-# TODO: Add tests for logging convenience functions and TopicQueueHandler
+# TODO should be deprecated someday
+RangeException = RangeError

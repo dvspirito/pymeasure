@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,18 +22,33 @@
 # THE SOFTWARE.
 #
 
-from pymeasure.process import StoppableProcess
+from pymeasure.experiment import (
+    Procedure, IntegerParameter, 
+    Parameter, FloatParameter
+)
+import random
+from time import sleep
 
 
-def test_stopping():
-    p = StoppableProcess()
-    p.start()
-    p.stop()
-    assert p.should_stop() == True
-    p.join()
+class RandomProcedure(Procedure):
 
-def test_joining():
-    p = StoppableProcess()
-    p.start()
-    p.join()
-    assert p.should_stop() == True
+    iterations = IntegerParameter('Loop Iterations', default=100)
+    delay = FloatParameter('Delay Time', units='s', default=0.001)
+    seed = Parameter('Random Seed', default='12345')
+
+    DATA_COLUMNS = ['Iteration', 'Random Number']
+
+    def startup(self):
+        random.seed(self.seed)
+
+    def execute(self):
+        for i in range(self.iterations):
+            data = {
+                'Iteration': i,
+                'Random Number': random.random()
+            }
+            self.emit('results', data)
+            self.emit('progress', 100.*i/self.iterations)
+            sleep(self.delay)
+            if self.should_stop():
+                break

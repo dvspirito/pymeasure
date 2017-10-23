@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,16 +23,21 @@
 #
 
 import logging
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
+
+import os
+import re
+import sys
+from copy import deepcopy
+from importlib.machinery import SourceFileLoader
+from datetime import datetime
+
+import pandas as pd
 
 from .procedure import Procedure, UnknownProcedure
 from .parameters import Parameter
 
-import os
-from datetime import datetime
-import re
-import pandas as pd
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 def unique_filename(directory, prefix='DATA', suffix='', ext='csv',
@@ -57,6 +62,34 @@ def unique_filename(directory, prefix='DATA', suffix='', ext='csv',
         basename = "%s%s%s.%s" % (prefix, now.strftime(datetimeformat), suffix, ext)
         filename = os.path.join(directory, basename)
     return filename
+
+
+class CSVFormatter(logging.Formatter):
+    """ Formatter of data results """
+
+    def __init__(self, columns, delimiter=','):
+        """Creates a csv formatter for a given list of columns (=header).
+
+        :param columns: list of column names.
+        :type columns: list
+        :param delimiter: delimiter between columns.
+        :type delimiter: str
+        """
+        super().__init__()
+        self.columns = columns
+        self.delimiter = delimiter
+
+    def format(self, record):
+        """Formats a record as csv.
+
+        :param record: record to format.
+        :type record: dict
+        :return: a string
+        """
+        return self.delimiter.join('{}'.format(record[x]) for x in self.columns)
+
+    def format_header(self):
+        return self.delimiter.join(self.columns)
 
 
 class Results(object):
@@ -86,16 +119,59 @@ class Results(object):
         self.parameters = procedure.parameter_objects()
         self._header_count = -1
 
+        self.formatter = CSVFormatter(columns=self.procedure.DATA_COLUMNS)
+
+        if isinstance(data_filename, (list, tuple)):
+            data_filenames, data_filename = data_filename, data_filename[0]
+        else:
+            data_filenames = [data_filename]
+
         self.data_filename = data_filename
+        self.data_filenames = data_filenames
+
         if os.path.exists(data_filename):  # Assume header is already written
             self.reload()
             self.procedure.status = Procedure.FINISHED
             # TODO: Correctly store and retrieve status
         else:
-            with open(data_filename, 'w') as f:
-                f.write(self.header())
-                f.write(self.labels())
+            for filename in self.data_filenames:
+                with open(filename, 'w') as f:
+                    f.write(self.header())
+                    f.write(self.labels())
             self._data = None
+
+    def __getstate__(self):
+        # Get all information needed to reconstruct procedure
+        self._parameters = self.procedure.parameter_values()
+        self._class = self.procedure.__class__.__name__
+        module = sys.modules[self.procedure.__module__]
+        self._package = module.__package__
+        self._module = module.__name__
+        self._file = module.__file__
+
+        state = self.__dict__.copy()
+        del state['procedure']
+        del state['procedure_class']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+        # Restore the procedure
+        module = SourceFileLoader(self._module, self._file).load_module()
+        cls = getattr(module, self._class)
+
+        self.procedure = cls()
+        self.procedure.set_parameters(self._parameters)
+        self.procedure.refresh_parameters()
+
+        self.procedure_class = cls
+
+        del self._parameters
+        del self._class
+        del self._package
+        del self._module
+        del self._file
 
     def header(self):
         """ Returns a text header to accompany a datafile so that the procedure
@@ -117,15 +193,13 @@ class Results(object):
         """ Returns the columns labels as a string to be written
         to the file
         """
-        return (Results.DELIMITER.join(self.procedure.DATA_COLUMNS) +
-                Results.LINE_BREAK)
+        return self.formatter.format_header() + Results.LINE_BREAK
 
     def format(self, data):
         """ Returns a formatted string containing the data to be written
         to a file
         """
-        rows = [str(data[x]) for x in self.procedure.DATA_COLUMNS]
-        return Results.DELIMITER.join(rows) + Results.LINE_BREAK
+        return self.formatter.format(data)
 
     def parse(self, line):
         """ Returns a dictionary containing the data from the line """
@@ -175,19 +249,19 @@ class Results(object):
                 raise ValueError("Header does not contain the Procedure class")
             try:
                 from importlib import import_module
-                module = import_module(procedure_module)
-                procedure_class = getattr(module, procedure_class)
+                procedure_module = import_module(procedure_module)
+                procedure_class = getattr(procedure_module, procedure_class)
                 procedure = procedure_class()
             except ImportError:
                 procedure = UnknownProcedure(parameters)
-                log.warning("Unknown Procedure in %s" % self.data_filename)
+                log.warning("Unknown Procedure being used")
             except Exception as e:
                 raise e
 
         def units_found(parameter, units):
             return (hasattr(parameter, 'units') and
                     parameter.units is None and
-                    type(parameter) is Parameter and
+                    isinstance(parameter, Parameter) and
                     units is not None)
 
         # Fill the procedure with the parameters found
@@ -201,7 +275,7 @@ class Results(object):
                 setattr(procedure, name, value)
             else:
                 raise Exception("Missing '%s' parameter when loading '%s' class" % (
-                        parameter.name, procedure_class))
+                    parameter.name, procedure_class))
         procedure.refresh_parameters()  # Enforce update of meta data
         return procedure
 
@@ -236,7 +310,7 @@ class Results(object):
             # Data has not been read
             try:
                 self.reload()
-            except:
+            except Exception:
                 # Empty dataframe
                 self._data = pd.DataFrame(columns=self.procedure.DATA_COLUMNS)
         else:  # Concatenate additional data
@@ -252,7 +326,7 @@ class Results(object):
                 tmp_frame = pd.concat(chunks, ignore_index=True)
                 self._data = pd.concat([self._data, tmp_frame],
                                        ignore_index=True)
-            except:
+            except Exception:
                 pass  # All data is up to date
         return self._data
 
@@ -268,5 +342,12 @@ class Results(object):
         )
         try:
             self._data = pd.concat(chunks, ignore_index=True)
-        except:
+        except Exception:
             self._data = chunks.read()
+
+    def __repr__(self):
+        return "<{}(filename='{}',procedure={},shape={})>".format(
+            self.__class__.__name__, self.data_filename,
+            self.procedure.__class__.__name__,
+            self.data.shape
+        )

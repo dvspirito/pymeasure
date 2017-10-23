@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,9 +22,18 @@
 # THE SOFTWARE.
 #
 
-import pytest
+from pymeasure.process import StoppableProcess
 
 
-def pytest_addoption(parser):
-    parser.addoption("--runslow", action="store_true",
-        help="run slow tests")
+def test_process_stopping():
+    process = StoppableProcess()
+    process.start()
+    process.stop()
+    assert process.should_stop() is True
+    process.join()
+
+def test__process_joining():
+    process = StoppableProcess()
+    process.start()
+    process.join()
+    assert process.should_stop() is True

@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +22,22 @@
 # THE SOFTWARE.
 #
 
+import logging
+
 from logging import Handler
-from .Qt import QtCore, QtGui
+
+from .Qt import QtCore
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 class LogHandler(QtCore.QObject, Handler):
-
     record = QtCore.QSignal(object)
 
     def __init__(self, parent=None):
+        QtCore.QObject.__init__(self, parent)
         Handler.__init__(self)
-        QtCore.QObject.__init__(self, parent=parent)
 
     def emit(self, record):
         self.record.emit(self.format(record))

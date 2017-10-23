@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,21 +23,21 @@
 #
 
 import logging
+
+from .Qt import QtCore
+from .thread import StoppableQThread
+from ..experiment.procedure import Procedure
+
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
-from .Qt import QtCore
-
 try:
     import zmq
-    from msgpack_numpy import loads
+    import cloudpickle
 except ImportError:
-    log.warning("ZMQ and MsgPack are required for TCP communication")
-
-from time import sleep
-
-from pymeasure.display.thread import StoppableQThread
-from pymeasure.experiment.procedure import Procedure
+    zmq = None
+    cloudpickle = None
+    log.warning("ZMQ and cloudpickle are required for TCP communication")
 
 
 class QListener(StoppableQThread):
@@ -47,13 +47,15 @@ class QListener(StoppableQThread):
     """
 
     def __init__(self, port, topic='', timeout=0.01):
-        """ Constructs the Listener object with a subscriber port 
+        """ Constructs the Listener object with a subscriber port
         over which to listen for messages
 
         :param port: TCP port to listen on
         :param topic: Topic to listen on
         :param timeout: Timeout in seconds to recheck stop flag
         """
+        super().__init__()
+
         self.port = port
         self.topic = topic
         self.context = zmq.Context()
@@ -67,11 +69,10 @@ class QListener(StoppableQThread):
         self.poller = zmq.Poller()
         self.poller.register(self.subscriber, zmq.POLLIN)
         self.timeout = timeout
-        super(QListener, self).__init__()
 
     def receive(self, flags=0):
-        topic, raw_data = self.subscriber.recv_multipart(flags=flags)
-        return topic.decode(), loads(raw_data, encoding='utf-8')
+        topic, record = self.subscriber.recv_serialized(deserialize=cloudpickle.loads, flags=flags)
+        return topic, record
 
     def message_waiting(self):
         return self.poller.poll(self.timeout)
@@ -84,7 +85,7 @@ class QListener(StoppableQThread):
 class Monitor(QtCore.QThread):
     """ Monitor listens for status and progress messages
     from a Worker through a queue to ensure no messages
-    are lost
+    are losts
     """
 
     status = QtCore.QSignal(int)
@@ -92,12 +93,12 @@ class Monitor(QtCore.QThread):
     log = QtCore.QSignal(object)
     worker_running = QtCore.QSignal()
     worker_failed = QtCore.QSignal()
-    worker_finished = QtCore.QSignal() # Distinguished from QThread.finished
+    worker_finished = QtCore.QSignal()  # Distinguished from QThread.finished
     worker_abort_returned = QtCore.QSignal()
 
     def __init__(self, queue):
+        super().__init__()
         self.queue = queue
-        super(Monitor, self).__init__()
 
     def run(self):
         while True:
@@ -121,8 +122,3 @@ class Monitor(QtCore.QThread):
                 self.log.emit(data)
 
         log.info("Monitor caught stop command")
-
-
-
-
-

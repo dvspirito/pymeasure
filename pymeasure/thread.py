@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,12 @@
 # THE SOFTWARE.
 #
 
+import logging
+
 from threading import Thread, Event
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 
 class StoppableThread(Thread):
@@ -31,9 +36,9 @@ class StoppableThread(Thread):
     """
 
     def __init__(self):
+        super().__init__()
         self._should_stop = Event()
         self._should_stop.clear()
-        super(StoppableThread, self).__init__()
 
     def join(self, timeout=0):
         """ Joins the current thread and forces it to stop after
@@ -44,7 +49,7 @@ class StoppableThread(Thread):
         self._should_stop.wait(timeout)
         if not self.should_stop():
             self.stop()
-        super(StoppableThread, self).join()
+        return super().join(0)
 
     def stop(self):
         self._should_stop.set()

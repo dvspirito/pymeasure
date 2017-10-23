@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,21 +22,27 @@
 # THE SOFTWARE.
 #
 
-from multiprocessing import set_start_method, Process, Event
+import logging
 
-# Force Windows multiprocessing behavior on Unix
-set_start_method('spawn', force=True)
+from multiprocessing import get_context
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
+context = get_context()
+# Useful for multiprocessing debugging:
+# context.log_to_stderr(logging.DEBUG)
 
 
-class StoppableProcess(Process):
+class StoppableProcess(context.Process):
     """ Base class for Processes which require the ability
     to be stopped by a process-safe method call
     """
 
     def __init__(self):
-        self._should_stop = Event()
+        super().__init__()
+        self._should_stop = context.Event()
         self._should_stop.clear()
-        super(StoppableProcess, self).__init__()
 
     def join(self, timeout=0):
         """ Joins the current process and forces it to stop after
@@ -47,7 +53,7 @@ class StoppableProcess(Process):
         self._should_stop.wait(timeout)
         if not self.should_stop():
             self.stop()
-        super(StoppableProcess, self).join(0)
+        return super().join(0)
 
     def stop(self):
         self._should_stop.set()
@@ -58,4 +64,3 @@ class StoppableProcess(Process):
     def __repr__(self):
         return "<%s(should_stop=%s)>" % (
             self.__class__.__name__, self.should_stop())
-

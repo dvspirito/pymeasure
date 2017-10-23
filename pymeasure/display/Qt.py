@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +22,25 @@
 # THE SOFTWARE.
 #
 
+import logging
+
 from pyqtgraph.Qt import QtGui, QtCore, loadUiType
 
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
 QtCore.QSignal = QtCore.pyqtSignal
+
 
 def fromUi(*args, **kwargs):
     """ Returns a Qt object constructed using loadUiType
     based on its arguments. All QWidget objects in the
     form class are set in the returned object for easy
-    accessiblity.
+    accessability.
     """
-    formClass, baseClass = loadUiType(*args, **kwargs)
-    widget = baseClass()
-    form = formClass()
+    form_class, base_class = loadUiType(*args, **kwargs)
+    widget = base_class()
+    form = form_class()
     form.setupUi(widget)
     form.retranslateUi(widget)
     for name in dir(form):

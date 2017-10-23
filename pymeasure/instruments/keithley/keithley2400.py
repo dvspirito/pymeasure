@@ -1,7 +1,7 @@
 #
 # This file is part of the PyMeasure package.
 #
-# Copyright (c) 2013-2016 PyMeasure Developers
+# Copyright (c) 2013-2017 PyMeasure Developers
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -348,8 +348,8 @@ class Keithley2400(Instrument, KeithleyBuffer):
         The compliance current is also set.
 
         :param compliance_current: A float in the correct range for a 
-                                   :attr:`~.compliance_current`
-        :param voltage_range: A :attr:`~.voltage_range` value or None
+                                   :attr:`~.Keithley2400.compliance_current`
+        :param voltage_range: A :attr:`~.Keithley2400.voltage_range` value or None
         """
         log.info("%s is sourcing voltage." % self.name)
         self.source_mode = 'voltage'
@@ -454,7 +454,7 @@ class Keithley2400(Instrument, KeithleyBuffer):
 
     def trigger_on_bus(self):
         """ Configures the trigger to detect events based on the bus
-        trigger, which can be activated by GET or *TRG.
+        trigger, which can be activated by :code:`GET` or :code:`*TRG`.
         """
         self.write(":ARM:COUN 1;:ARM:SOUR BUS;:TRIG:SOUR BUS;")
 
